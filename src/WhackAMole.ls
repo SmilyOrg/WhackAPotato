@@ -9,17 +9,16 @@ package
 {
     import loom.Application;    
     import loom.platform.Timer;
-    import loom.animation.LoomTween;
-    import loom.animation.LoomEaseType;
+    import loom2d.animation.Tween;
+    import loom2d.animation.Transitions;
     import loom2d.display.StageScaleMode;
     import loom2d.display.Image;        
     import loom2d.textures.Texture;
     import loom2d.ui.SimpleLabel;
     import loom2d.events.KeyboardEvent;
     import loom.platform.LoomKey;
-    import cocos2d.Cocos2D;
-
-    import cocosdenshion.SimpleAudioEngine;
+    import loom2d.Loom2D;
+    import loom.sound.Sound;
 
     import loom2d.events.TouchEvent;
     import loom2d.events.TouchPhase;
@@ -67,14 +66,21 @@ package
         protected var moleDownY:Number;
         protected var missY:Number;
         protected var scoreY:Number;
+        protected var healthSound:Sound;
+        protected var hitSound:Sound;
+        protected var missSound:Sound;
 
         override public function run():void
         {
             stage.scaleMode = StageScaleMode.FILL;
-
+            
             var screenWidth = stage.stageWidth;
             var screenHeight = stage.stageHeight;            
          
+            healthSound = Sound.load("assets/sounds/health.wav");
+            hitSound = Sound.load("assets/sounds/hit.wav");
+            missSound = Sound.load("assets/sounds/miss.wav");
+
             waitTime = INITIAL_MOLE_UP_TIME;
             strikes = 0;
             timeLastHealthWarning = 0;
@@ -176,9 +182,6 @@ package
             stage.addEventListener(KeyboardEvent.KEY_DOWN, keyDownHandler);
 
             createScoreLabels();
-
-            // Switch to fullscreen mode.
-            Cocos2D.toggleFullscreen();
         }
 
         protected function keyDownHandler(event:KeyboardEvent):void
@@ -202,10 +205,6 @@ package
                 resetGame();
             }
 
-            if (keycode == LoomKey.F) {
-                Cocos2D.toggleFullscreen();
-            }
-
             if (keycode == LoomKey.ESCAPE) {
                 Process.exit(0);
             }
@@ -222,7 +221,7 @@ package
             // Play warning sound during the last 5 seconds
             if ((timeLeftSecs < 5) || (strikesLeft <= 1)) {
                 if (timeLeftSecs != timeLastHealthWarning) {
-                    SimpleAudioEngine.sharedEngine().playEffect("assets/sounds/health.wav");
+                    healthSound.play();
                     timeLastHealthWarning = timeLeftSecs;                
                 }
             }
@@ -261,12 +260,12 @@ package
             for (var i = 0; i < scores.length; i++)
             {
                 var score = scores[i];
-                if (!LoomTween.isTweening(score))
+                if (!Loom2D.juggler.containsTweens(score))
                     return score;
             }
 
             // default, return the first one
-            LoomTween.killTweensOf(scores[0]);
+            Loom2D.juggler.removeTweens(scores[0]);
             return scores[0];
         }
 
@@ -274,13 +273,13 @@ package
         {
             for (var i = 0; i < misses.length; i++) {
                 var miss = misses[i];
-                if (!LoomTween.isTweening(miss)) {
-                    return miss;
+                if (!Loom2D.juggler.containsTweens(miss)) {
+                   return miss;
                 }
             }
 
             // default, return the first one
-            LoomTween.killTweensOf(misses[0]);
+            Loom2D.juggler.removeTweens(misses[0]);
             return misses[0];
         }
 
@@ -290,16 +289,16 @@ package
             {
                 var mole = moles[i];
                 
-                if (!LoomTween.isTweening(mole) && (mole.y == moleDownY)) {
+                if (!Loom2D.juggler.containsTweens(mole) && (mole.y == moleDownY)) {
                     moleStates[i] = false;
                 }
 
                 // Randomly start popping up mole
                 if (Math.floor(Math.random() * 4) == 0)
                 {
-                    if (!LoomTween.isTweening(mole)) {
-                        LoomTween.to(mole, 0.5, {"y": moleUpY, "ease": LoomEaseType.EASE_OUT});
-                        LoomTween.to(mole, 0.3, {"y": moleDownY, "ease": LoomEaseType.EASE_OUT, "delay": 0.5+waitTime});
+                    if (!Loom2D.juggler.containsTweens(mole)) {
+                        Loom2D.juggler.tween(mole, 0.5, {"y": moleUpY, "ease": Transitions.EASE_OUT});
+                        Loom2D.juggler.tween(mole, 0.3, {"y": moleDownY, "ease": Transitions.EASE_OUT, "delay": 0.5+waitTime});
                     }
                 }
             }
@@ -343,7 +342,7 @@ package
         {
             var mole = moles[index];
 
-            SimpleAudioEngine.sharedEngine().playEffect("assets/sounds/hit.wav");
+            hitSound.play();
 
             // increase the difficulty as we get more moles
             waitTime *= 0.9;
@@ -360,11 +359,11 @@ package
 
             updateTotal(HIT_POINTS);
 
-            LoomTween.to(score, 0.3, {"scaleX": 0.5, "ease": LoomEaseType.EASE_OUT_BACK});
-            LoomTween.to(score, 0.3, {"scaleY": 0.5, "ease": LoomEaseType.EASE_OUT_BACK});
-            LoomTween.to(score, 0.3, {"y": -100, "ease": LoomEaseType.EASE_IN_BACK, "delay": 0.3});
-            LoomTween.killTweensOf(mole);
-            LoomTween.to(mole, 0.3, {"y": moleDownY, "ease": LoomEaseType.EASE_OUT, "delay": 0.1}).onComplete;
+            Loom2D.juggler.tween(score, 0.3, {"scaleX": 0.5, "ease": Transitions.EASE_OUT_BACK});
+            Loom2D.juggler.tween(score, 0.3, {"scaleY": 0.5, "ease": Transitions.EASE_OUT_BACK});
+            Loom2D.juggler.tween(score, 0.3, {"y": -100, "ease": Transitions.EASE_IN_BACK, "delay": 0.3});
+            Loom2D.juggler.removeTweens(mole);
+            Loom2D.juggler.tween(mole, 0.3, {"y": moleDownY, "ease": Transitions.EASE_OUT, "delay": 0.1}).onComplete;
         }
 
         protected function onMiss(index:Number)
@@ -376,7 +375,7 @@ package
                 return;
             }
             
-            SimpleAudioEngine.sharedEngine().playEffect("assets/sounds/miss.wav");
+            missSound.play();
             
             // Disable strike counter...
             //strikes++;
@@ -388,9 +387,9 @@ package
             miss.y = missY;
             miss.scale = 0;
 
-            LoomTween.to(miss, 0.3, {"scaleX": 0.5, "ease": LoomEaseType.EASE_OUT_BACK});
-            LoomTween.to(miss, 0.3, {"scaleY": 0.5, "ease": LoomEaseType.EASE_OUT_BACK});
-            LoomTween.to(miss, 0.3, {"y": -100, "ease": LoomEaseType.EASE_IN_BACK, "delay": 0.3});
+            Loom2D.juggler.tween(miss, 0.3, {"scaleX": 0.5, "ease": Transitions.EASE_OUT_BACK});
+            Loom2D.juggler.tween(miss, 0.3, {"scaleY": 0.5, "ease": Transitions.EASE_OUT_BACK});
+            Loom2D.juggler.tween(miss, 0.3, {"y": -100, "ease": Transitions.EASE_IN_BACK, "delay": 0.3});
 
             if (strikes == MAX_STRIKES)
             {

@@ -3,6 +3,8 @@ WhackAPotato
 
 A modified version of the [Loom Game Engine](http://theengine.co/loom) [WhackAMole example](http://theengine.co/examples) to make it suitable for use with [MaKey MaKey](http://www.makeymakey.com).
 
+Updated for sprint34.
+
 Main modifications:
 * Added keyboard support
   * Whack with A, S, D keys (keys that can easily be connected on MaKey MaKey)
